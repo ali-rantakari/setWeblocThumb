@@ -18,6 +18,14 @@ all: setWeblocThumb
 
 
 
+usage.txt:
+	@echo
+	@echo ---- generating usage.txt:
+	@echo ======================================
+	./setWeblocThumb > usage.txt
+
+
+
 #-------------------------------------------------------------------------
 #-------------------------------------------------------------------------
 # generate imgBase64.m with the imgBase64 NSString*
