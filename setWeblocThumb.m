@@ -52,6 +52,7 @@ under the License.
 
 NSImage *baseIconImage = nil;
 BOOL arg_verbose = NO;
+WebPreferences *webViewPrefs = nil;
 
 
 BOOL fileHasCustomIcon(NSString *filePath)
@@ -184,6 +185,8 @@ void NSPrintfErr(NSString *aStr, ...)
 		[self.webView setFrame:NSMakeRect(0, 0, 700, 700)];
 		[self.webView setDrawsBackground:YES];
 		[self.webView setFrameLoadDelegate:self];
+		[self.webView setFrameLoadDelegate:self];
+		[self.webView setPreferences:webViewPrefs];
 	}
 	
 	NSString *weblocFileURL = [self getURLOfWeblocFileAtPath:weblocFilePath];
@@ -288,7 +291,16 @@ int main(int argc, char *argv[])
 		printf("       that contains .webloc files.\n");
 		printf("\n");
 		printf("       -f  sets icons also for files that already have a\n");
-		printf("           custom icon.\n");
+		printf("           custom icon (they are ignored by default).\n");
+		printf("\n");
+		printf("       +j  sets Java on when taking screenshots\n");
+		printf("       -j  sets Java off when taking screenshots (default)\n");
+		printf("\n");
+		printf("       +js sets JavaScript on when taking screenshots (default)\n");
+		printf("       -js sets JavaScript off when taking screenshots\n");
+		printf("\n");
+		printf("       +p  sets browser plugins on when taking screenshots\n");
+		printf("       -p  sets browser plugins off when taking screenshots (default)\n");
 		printf("\n");
 		printf("       -v  makes the output verbose.\n");
 		printf("\n");
@@ -296,6 +308,9 @@ int main(int argc, char *argv[])
 	}
 	
 	BOOL arg_forceRun = NO;
+	BOOL arg_allowPlugins = NO;
+	BOOL arg_allowJava = NO;
+	BOOL arg_allowJavaScript = YES;
 	NSMutableArray *weblocFilePaths = [NSMutableArray array];
 	
 	NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
@@ -309,6 +324,18 @@ int main(int argc, char *argv[])
 				arg_forceRun = YES;
 			else if (strcmp(argv[i], "-v") == 0)
 				arg_verbose = YES;
+			else if (strcmp(argv[i], "-js") == 0)
+				arg_allowJavaScript = NO;
+			else if (strcmp(argv[i], "+js") == 0)
+				arg_allowJavaScript = YES;
+			else if (strcmp(argv[i], "-j") == 0)
+				arg_allowJava = NO;
+			else if (strcmp(argv[i], "+j") == 0)
+				arg_allowJava = YES;
+			else if (strcmp(argv[i], "-p") == 0)
+				arg_allowPlugins = NO;
+			else if (strcmp(argv[i], "+p") == 0)
+				arg_allowPlugins = YES;
 		}
 	}
 	
@@ -346,6 +373,13 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	
+	webViewPrefs = [[[WebPreferences alloc] initWithIdentifier:@"setWeblocThumbWebViewPrefs"] autorelease];
+	[webViewPrefs setAllowsAnimatedImages:NO];
+	[webViewPrefs setPrivateBrowsingEnabled:YES];
+	[webViewPrefs setJavaEnabled:arg_allowJava];
+	[webViewPrefs setJavaScriptEnabled:arg_allowJavaScript];
+	[webViewPrefs setPlugInsEnabled:arg_allowPlugins];
 	
 	
 	NSMutableArray *weblocIconifiers = [NSMutableArray arrayWithCapacity:[weblocFilePaths count]];
