@@ -147,6 +147,7 @@ void NSPrintfErr(NSString *aStr, ...)
 - (NSString *) getURLOfWeblocFileAtPath:(NSString *)path;
 - (void) start;
 - (void) setSelfAsDone;
+- (void) drawAndSetIcon;
 
 @end
 
@@ -192,6 +193,12 @@ void NSPrintfErr(NSString *aStr, ...)
 	NSString *weblocFileURL = [self getURLOfWeblocFileAtPath:weblocFilePath];
 	DDLogVerbose(@"url: %@", weblocFileURL);
 	
+	if (weblocFileURL == nil)
+	{
+		NSPrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
+		doneLoading = YES;
+	}
+	
 	[self.webView setMainFrameURL:weblocFileURL];
 	[self.webView reload:self];
 }
@@ -220,16 +227,8 @@ void NSPrintfErr(NSString *aStr, ...)
 }
 
 
-- (void) webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame
+- (void) drawAndSetIcon
 {
-	DDLogVerbose(@"didFinishLoadForFrame:. isLoading = %@, estimatedProgress = %f",
-		  ([self.webView isLoading]?@"YES":@"NO"),
-		  [self.webView estimatedProgress]
-		  );
-	
-	if ([self.webView isLoading] || doneLoading)
-		return;
-	
 	DDLogVerbose(@"drawing icon for: %@", self.weblocFilePath);
 	
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
@@ -256,16 +255,29 @@ void NSPrintfErr(NSString *aStr, ...)
 	 [self setSelfAsDone];
 }
 
+- (void) webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame
+{
+	DDLogVerbose(@"didFinishLoadForFrame:. isLoading = %@, estimatedProgress = %f",
+		  ([self.webView isLoading]?@"YES":@"NO"),
+		  [self.webView estimatedProgress]
+		  );
+	
+	if ([self.webView isLoading] || doneLoading)
+		return;
+	
+	[self drawAndSetIcon];
+}
+
 - (void) webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
 	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
-	[self setSelfAsDone];
+	doneLoading = YES;
 }
 
 - (void) webView:(WebView *)sender didFailLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
 	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
-	[self setSelfAsDone];
+	doneLoading = YES;
 }
 
 
@@ -282,27 +294,29 @@ int main(int argc, char *argv[])
 	char *myBasename = basename(argv[0]);
 	if (argc == 1)
 	{
-		printf("usage: %s [-f] [-v] <path>\n", myBasename);
+		printf("usage: %s [options] <path>\n", myBasename);
 		printf("\n");
-		printf("       Sets custom icons for .webloc files that display\n");
-		printf("       a thumbnail of the web page that they point to.\n");
+		printf("  Sets custom icons for .webloc files that display\n");
+		printf("  a thumbnail of the web page that they point to.\n");
 		printf("\n");
-		printf("       <path> may point to a .webloc file or a directory\n");
-		printf("       that contains .webloc files.\n");
+		printf("  <path> may point to a .webloc file or a directory\n");
+		printf("  that contains .webloc files.\n");
 		printf("\n");
-		printf("       -f  sets icons also for files that already have a\n");
-		printf("           custom icon (they are ignored by default).\n");
+		printf("  [options:]\n");
 		printf("\n");
-		printf("       +j  sets Java on when taking screenshots\n");
-		printf("       -j  sets Java off when taking screenshots (default)\n");
+		printf("  -f  sets icons also for files that already have a\n");
+		printf("      custom icon (they are ignored by default).\n");
 		printf("\n");
-		printf("       +js sets JavaScript on when taking screenshots (default)\n");
-		printf("       -js sets JavaScript off when taking screenshots\n");
+		printf("  +j  sets Java on when taking screenshots\n");
+		printf("  -j  sets Java off when taking screenshots (default)\n");
 		printf("\n");
-		printf("       +p  sets browser plugins on when taking screenshots\n");
-		printf("       -p  sets browser plugins off when taking screenshots (default)\n");
+		printf("  +js sets JavaScript on when taking screenshots (default)\n");
+		printf("  -js sets JavaScript off when taking screenshots\n");
 		printf("\n");
-		printf("       -v  makes the output verbose.\n");
+		printf("  +p  sets browser plugins on when taking screenshots\n");
+		printf("  -p  sets browser plugins off when taking screenshots (default)\n");
+		printf("\n");
+		printf("  -v  makes the output verbose.\n");
 		printf("\n");
 		exit(0);
 	}
