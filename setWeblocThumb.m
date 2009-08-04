@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
 		NSPrintf(@"  -v  makes the output verbose.\n");
 		NSPrintf(@"\n");
 		NSPrintf(@"Version %@\n", versionNumberStr());
-		NSPrintf(@"(c) 2008-2009 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
+		NSPrintf(@"(c) 2009 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
 		NSPrintf(@"\n");
 		exit(0);
 	}

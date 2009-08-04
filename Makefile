@@ -24,7 +24,7 @@ all: setWeblocThumb
 docs: usage.txt
 
 
-usage.txt:
+usage.txt: setWeblocThumb
 	@echo
 	@echo ---- generating usage.txt:
 	@echo ======================================
