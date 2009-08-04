@@ -1,6 +1,5 @@
 imgBase64.m
 setWeblocThumb
 usage.txt
-deployment-files/*
 deploymentScpTarget
 deployment/*
