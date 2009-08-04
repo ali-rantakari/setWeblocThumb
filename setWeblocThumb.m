@@ -30,7 +30,7 @@ under the License.
 #import "imgBase64.m"
 
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 3
 
 #define DEBUG_ERROR   (DEBUG_LEVEL >= 1)
 #define DEBUG_WARN    (DEBUG_LEVEL >= 2)
@@ -53,21 +53,22 @@ under the License.
 NSImage *baseIconImage = nil;
 BOOL arg_verbose = NO;
 
-NSData *standardWeblocIcon = nil;
-
 
 BOOL fileHasCustomIcon(NSString *filePath)
 {
-	// we have to compare TIFFRepresentations since NSImage's isEqualTo: only
-	// does pointer equality, which won't work for us here
-	
-	if (standardWeblocIcon == nil)
-		standardWeblocIcon = [[[NSWorkspace sharedWorkspace] iconForFileType:@"webloc"] TIFFRepresentation];
-	
-	NSData *fileIcon = [[[NSWorkspace sharedWorkspace] iconForFile:filePath] TIFFRepresentation];
-	if (standardWeblocIcon == nil || fileIcon == nil)
+	FSRef fsRef;
+	if (FSPathMakeRef((const UInt8 *)[filePath fileSystemRepresentation], &fsRef, NULL) != noErr)
 		return NO;
-	return ![fileIcon isEqual:standardWeblocIcon];
+	
+	FSCatalogInfo fsCatalogInfo;
+	if (FSGetCatalogInfo(&fsRef, kFSCatInfoFinderInfo, &fsCatalogInfo, NULL, NULL, NULL) == noErr)
+	{
+		FileInfo *fileInfo = (FileInfo*)(&fsCatalogInfo.finderInfo);
+		UInt16 infoFlags = fileInfo->finderFlags;
+		return ((infoFlags & kHasCustomIcon) != 0);
+	}
+	
+	return NO;
 }
 
 
