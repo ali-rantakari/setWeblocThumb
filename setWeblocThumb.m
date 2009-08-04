@@ -47,7 +47,10 @@ under the License.
 										NSLog((format), ##__VA_ARGS__)
 
 
-#define GETURL_AS_FORMAT_STR @"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
+#define GETURL_AS_FORMAT_STR	@"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
+#define WEBVIEW_FRAME_RECT		NSMakeRect(0, 0, 700, 700)
+#define WEBVIEW_SCREENSHOT_SIZE	NSMakeSize(1280, 1024)
+#define THUMB_DRAWING_RECT		NSMakeRect(95, 160, 320, 320)
 
 
 const int VERSION_MAJOR = 0;
@@ -195,7 +198,7 @@ void NSPrintfErr(NSString *aStr, ...)
 	if (self.webView == nil)
 	{
 		self.webView = [[WebView alloc] init];
-		[self.webView setFrame:NSMakeRect(0, 0, 700, 700)];
+		[self.webView setFrame:WEBVIEW_FRAME_RECT];
 		[self.webView setDrawsBackground:YES];
 		[self.webView setFrameLoadDelegate:self];
 		[self.webView setFrameLoadDelegate:self];
@@ -245,13 +248,13 @@ void NSPrintfErr(NSString *aStr, ...)
 	
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
     [webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
-    NSImage *webViewImage = [[NSImage alloc] initWithSize:NSMakeSize(1280, 1024)];
+    NSImage *webViewImage = [[NSImage alloc] initWithSize:WEBVIEW_SCREENSHOT_SIZE];
     [webViewImage addRepresentation:webViewImageRep];
 	
 	NSImage *newIconImage = [[baseIconImage copy] autorelease];
 	[newIconImage lockFocus];
 	[webViewImage
-	 drawInRect:NSMakeRect(95, 160, 320, 320)
+	 drawInRect:THUMB_DRAWING_RECT
 	 fromRect:NSZeroRect
 	 operation:NSCompositeCopy
 	 fraction:1.0
