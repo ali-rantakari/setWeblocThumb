@@ -50,9 +50,21 @@ under the License.
 #define GETURL_AS_FORMAT_STR @"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
 
 
+const int VERSION_MAJOR = 0;
+const int VERSION_MINOR = 8;
+const int VERSION_BUILD = 0;
+
+
 NSImage *baseIconImage = nil;
 BOOL arg_verbose = NO;
 WebPreferences *webViewPrefs = nil;
+double screenshotDelaySec = 0.0;
+
+
+NSString* versionNumberStr()
+{
+	return [NSString stringWithFormat:@"%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD];
+}
 
 
 BOOL fileHasCustomIcon(NSString *filePath)
@@ -99,8 +111,6 @@ void VerboseNSPrintf(NSString *aStr, ...)
 
 void NSPrintf(NSString *aStr, ...)
 {
-	if (!arg_verbose)
-		return;
 	va_list argList;
 	va_start(argList, aStr);
 	RealNSPrintf(aStr, argList);
@@ -137,13 +147,14 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	WebView *webView;
 	NSString *weblocFilePath;
+	BOOL doneIconizing;
 	BOOL doneLoading;
 }
 
 @property(retain) WebView *webView;
 @property(copy) NSString *weblocFilePath;
 
-- (BOOL) doneLoading;
+- (BOOL) doneIconizing;
 - (NSString *) getURLOfWeblocFileAtPath:(NSString *)path;
 - (void) start;
 - (void) setSelfAsDone;
@@ -160,6 +171,7 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	if (( self = [super init] ))
 	{
+		doneIconizing = NO;
 		doneLoading = NO;
 	}
 	
@@ -196,21 +208,21 @@ void NSPrintfErr(NSString *aStr, ...)
 	if (weblocFileURL == nil)
 	{
 		NSPrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
-		doneLoading = YES;
+		doneIconizing = YES;
 	}
 	
 	[self.webView setMainFrameURL:weblocFileURL];
 	[self.webView reload:self];
 }
 
-- (BOOL) doneLoading
+- (BOOL) doneIconizing
 {
-	return doneLoading;
+	return doneIconizing;
 }
 
 - (void) setSelfAsDone
 {
-	doneLoading = YES;
+	doneIconizing = YES;
 	VerboseNSPrintf(@" -> done: %@\n", self.weblocFilePath);
 }
 
@@ -262,22 +274,38 @@ void NSPrintfErr(NSString *aStr, ...)
 		  [self.webView estimatedProgress]
 		  );
 	
-	if ([self.webView isLoading] || doneLoading)
+	if ([self.webView isLoading] || doneIconizing || doneLoading)
 		return;
 	
-	[self drawAndSetIcon];
+	doneLoading = YES;
+	
+	if (screenshotDelaySec > 0)
+	{
+		NSInvocation *invocation = [NSInvocation
+			invocationWithMethodSignature:[self methodSignatureForSelector:@selector(drawAndSetIcon)]
+			];
+		[invocation setTarget:self];
+		[invocation setSelector:@selector(drawAndSetIcon)];
+		[NSTimer
+			scheduledTimerWithTimeInterval:screenshotDelaySec
+			invocation:invocation
+			repeats:NO
+			];
+	}
+	else
+		[self drawAndSetIcon];
 }
 
 - (void) webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
 	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
-	doneLoading = YES;
+	doneIconizing = YES;
 }
 
 - (void) webView:(WebView *)sender didFailLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
 	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
-	doneLoading = YES;
+	doneIconizing = YES;
 }
 
 
@@ -294,30 +322,36 @@ int main(int argc, char *argv[])
 	char *myBasename = basename(argv[0]);
 	if (argc == 1)
 	{
-		printf("usage: %s [options] <path>\n", myBasename);
-		printf("\n");
-		printf("  Sets custom icons for .webloc files that display\n");
-		printf("  a thumbnail of the web page that they point to.\n");
-		printf("\n");
-		printf("  <path> may point to a .webloc file or a directory\n");
-		printf("  that contains .webloc files.\n");
-		printf("\n");
-		printf("  [options:]\n");
-		printf("\n");
-		printf("  -f  sets icons also for files that already have a\n");
-		printf("      custom icon (they are ignored by default).\n");
-		printf("\n");
-		printf("  +j  sets Java on when taking screenshots\n");
-		printf("  -j  sets Java off when taking screenshots (default)\n");
-		printf("\n");
-		printf("  +js sets JavaScript on when taking screenshots (default)\n");
-		printf("  -js sets JavaScript off when taking screenshots\n");
-		printf("\n");
-		printf("  +p  sets browser plugins on when taking screenshots\n");
-		printf("  -p  sets browser plugins off when taking screenshots (default)\n");
-		printf("\n");
-		printf("  -v  makes the output verbose.\n");
-		printf("\n");
+		NSPrintf(@"usage: %s [options] <path>\n", myBasename);
+		NSPrintf(@"\n");
+		NSPrintf(@"  Sets custom icons for .webloc files that display\n");
+		NSPrintf(@"  a thumbnail of the web page that they point to.\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  <path> may point to a .webloc file or a directory\n");
+		NSPrintf(@"  that contains .webloc files.\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  [options:]\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  -f  sets icons also for files that already have a\n");
+		NSPrintf(@"      custom icon (they are ignored by default).\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  +j  sets Java on when taking screenshots\n");
+		NSPrintf(@"  -j  sets Java off when taking screenshots (default)\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  +js sets JavaScript on when taking screenshots (default)\n");
+		NSPrintf(@"  -js sets JavaScript off when taking screenshots\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  +p  sets browser plugins on when taking screenshots\n");
+		NSPrintf(@"  -p  sets browser plugins off when taking screenshots (default)\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  -d <sec>  waits for <sec> seconds before taking the\n");
+		NSPrintf(@"            screenshots.\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"  -v  makes the output verbose.\n");
+		NSPrintf(@"\n");
+		NSPrintf(@"Version %@\n", versionNumberStr());
+		NSPrintf(@"(c) 2008-2009 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
+		NSPrintf(@"\n");
 		exit(0);
 	}
 	
@@ -350,6 +384,8 @@ int main(int argc, char *argv[])
 				arg_allowPlugins = NO;
 			else if (strcmp(argv[i], "+p") == 0)
 				arg_allowPlugins = YES;
+			else if ((strcmp(argv[i], "-d") == 0) && (i+1 < argc))
+				screenshotDelaySec = abs([[NSString stringWithCString:argv[i+1] encoding:NSUTF8StringEncoding] doubleValue]);
 		}
 	}
 	
@@ -438,7 +474,7 @@ int main(int argc, char *argv[])
 		someStillLoading = NO;
 		for (aWeblocIconifier in weblocIconifiers)
 		{
-			someStillLoading = ![aWeblocIconifier doneLoading];
+			someStillLoading = ![aWeblocIconifier doneIconizing];
 			if (someStillLoading)
 				break;
 		}
