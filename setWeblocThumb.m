@@ -30,23 +30,6 @@ under the License.
 #import "imgBase64.m"
 
 
-#define DEBUG_LEVEL 3
-
-#define DEBUG_ERROR   (DEBUG_LEVEL >= 1)
-#define DEBUG_WARN    (DEBUG_LEVEL >= 2)
-#define DEBUG_INFO    (DEBUG_LEVEL >= 3)
-#define DEBUG_VERBOSE (DEBUG_LEVEL >= 4)
-
-#define DDLogError(format, ...)		if(DEBUG_ERROR)   \
-										NSLog((format), ##__VA_ARGS__)
-#define DDLogWarn(format, ...)		if(DEBUG_WARN)    \
-										NSLog((format), ##__VA_ARGS__)
-#define DDLogInfo(format, ...)		if(DEBUG_INFO)    \
-										NSLog((format), ##__VA_ARGS__)
-#define DDLogVerbose(format, ...)	if(DEBUG_VERBOSE) \
-										NSLog((format), ##__VA_ARGS__)
-
-
 #define GETURL_AS_FORMAT_STR	@"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
 #define WEBVIEW_FRAME_RECT		NSMakeRect(0, 0, 700, 700)
 #define WEBVIEW_SCREENSHOT_SIZE	NSMakeSize(1280, 1024)
@@ -55,7 +38,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 8;
-const int VERSION_BUILD = 0;
+const int VERSION_BUILD = 5;
 
 
 NSImage *baseIconImage = nil;
@@ -86,6 +69,14 @@ BOOL fileHasCustomIcon(NSString *filePath)
 	
 	return NO;
 }
+
+
+NSString * getURLOfWeblocFile(NSString *path)
+{
+	NSDictionary *weblocDict = [NSDictionary dictionaryWithContentsOfFile:path];
+	return [weblocDict objectForKey:@"URL"];
+}
+
 
 
 // other NSPrintf functions call this, and you call them
@@ -150,15 +141,16 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	WebView *webView;
 	NSString *weblocFilePath;
+	NSString *weblocURL;
 	BOOL doneIconizing;
 	BOOL doneLoading;
 }
 
 @property(retain) WebView *webView;
 @property(copy) NSString *weblocFilePath;
+@property(copy) NSString *weblocURL;
 
 - (BOOL) doneIconizing;
-- (NSString *) getURLOfWeblocFileAtPath:(NSString *)path;
 - (void) start;
 - (void) setSelfAsDone;
 - (void) drawAndSetIcon;
@@ -169,14 +161,15 @@ void NSPrintfErr(NSString *aStr, ...)
 
 @synthesize webView;
 @synthesize weblocFilePath;
+@synthesize weblocURL;
 
 - (id) init
 {
-	if (( self = [super init] ))
-	{
-		doneIconizing = NO;
-		doneLoading = NO;
-	}
+	if (!(self = [super init]))
+		return nil;
+	
+	doneIconizing = NO;
+	doneLoading = NO;
 	
 	return self;
 }
@@ -185,6 +178,7 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	self.webView = nil;
 	self.weblocFilePath = nil;
+	self.weblocURL = nil;
 	[super dealloc];
 }
 
@@ -205,16 +199,16 @@ void NSPrintfErr(NSString *aStr, ...)
 		[self.webView setPreferences:webViewPrefs];
 	}
 	
-	NSString *weblocFileURL = [self getURLOfWeblocFileAtPath:weblocFilePath];
-	DDLogVerbose(@"url: %@", weblocFileURL);
+	self.weblocURL = getURLOfWeblocFile(weblocFilePath);
+	VerboseNSPrintf(@"  url: %@\n", self.weblocURL);
 	
-	if (weblocFileURL == nil)
+	if (self.weblocURL == nil)
 	{
 		NSPrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
 		doneIconizing = YES;
 	}
 	
-	[self.webView setMainFrameURL:weblocFileURL];
+	[self.webView setMainFrameURL:self.weblocURL];
 	[self.webView reload:self];
 }
 
@@ -231,26 +225,17 @@ void NSPrintfErr(NSString *aStr, ...)
 
 
 
-- (NSString *) getURLOfWeblocFileAtPath:(NSString *)path
-{
-	NSDictionary *appleScriptError;
-	NSString *asSource = [NSString stringWithFormat:GETURL_AS_FORMAT_STR, path];
-	NSAppleScript *getURLAppleScript = [[NSAppleScript alloc] initWithSource:asSource];
-	NSAppleEventDescriptor *ret = [getURLAppleScript executeAndReturnError:&appleScriptError];
-	return [ret stringValue];
-	[getURLAppleScript release];
-}
 
 
 - (void) drawAndSetIcon
 {
-	DDLogVerbose(@"drawing icon for: %@", self.weblocFilePath);
-	
+	// get screenshot from webView
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
     [webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
     NSImage *webViewImage = [[NSImage alloc] initWithSize:WEBVIEW_SCREENSHOT_SIZE];
     [webViewImage addRepresentation:webViewImageRep];
 	
+    // draw screenshot on top of base image
 	NSImage *newIconImage = [[baseIconImage copy] autorelease];
 	[newIconImage lockFocus];
 	[webViewImage
@@ -261,22 +246,62 @@ void NSPrintfErr(NSString *aStr, ...)
 	 ];
 	[newIconImage unlockFocus];
 	
+	// deal with possible file renames
+	if (![[NSFileManager defaultManager] fileExistsAtPath:self.weblocFilePath])
+	{
+		VerboseNSPrintf(@" -> can't find file (renamed?). searching in containing folder.\n");
+		
+		// file can't be found; go through containing folder
+		// and try to find .webloc files that point to the same
+		// URL we have and don't have icons (this should be the
+		// case if the file has simply been renamed)
+		// 
+		NSString *parentDirPath = [self.weblocFilePath stringByDeletingLastPathComponent];
+		NSArray *parentDirContents = [[NSFileManager defaultManager]
+			contentsOfDirectoryAtPath:parentDirPath
+			error:NULL
+			];
+		
+		self.weblocFilePath = nil;
+		
+		if (parentDirContents != nil)
+		{
+			for (NSString *aFileName in parentDirContents)
+			{
+				NSString *aFilePath = [parentDirPath stringByAppendingPathComponent:aFileName];
+				
+				if ([[aFilePath pathExtension] isEqualToString:@"webloc"]
+					&& [self.weblocURL isEqualToString:getURLOfWeblocFile(aFilePath)]
+					&& !fileHasCustomIcon(aFilePath)
+					)
+				{
+					VerboseNSPrintf(@"    found file with matching URL:\n      %@\n", aFilePath);
+					self.weblocFilePath = aFilePath;
+					break;
+				}
+			}
+		}
+	}
+	
+	if (self.weblocFilePath == nil)
+	{
+		NSPrintfErr(@" -> FAIL: Cannot find file. Must have been moved.\n");
+		doneIconizing = YES;
+		return;
+	}
+	
+	// set icon to file
 	[[NSWorkspace sharedWorkspace]
 	 setIcon:newIconImage
-	 forFile:weblocFilePath
+	 forFile:self.weblocFilePath
 	 options:0
 	 ];
-	 
-	 [self setSelfAsDone];
+	
+	[self setSelfAsDone];
 }
 
 - (void) webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame
 {
-	DDLogVerbose(@"didFinishLoadForFrame:. isLoading = %@, estimatedProgress = %f",
-		  ([self.webView isLoading]?@"YES":@"NO"),
-		  [self.webView estimatedProgress]
-		  );
-	
 	if ([self.webView isLoading] || doneIconizing || doneLoading)
 		return;
 	
