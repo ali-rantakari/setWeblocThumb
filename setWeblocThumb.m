@@ -38,7 +38,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 8;
-const int VERSION_BUILD = 5;
+const int VERSION_BUILD = 6;
 
 
 NSImage *baseIconImage = nil;
@@ -209,7 +209,6 @@ void NSPrintfErr(NSString *aStr, ...)
 	}
 	
 	[self.webView setMainFrameURL:self.weblocURL];
-	[self.webView reload:self];
 }
 
 - (BOOL) doneIconizing
@@ -326,13 +325,17 @@ void NSPrintfErr(NSString *aStr, ...)
 
 - (void) webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
-	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
+	if ([error code] == NSURLErrorCancelled)
+		return;
+	NSPrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
 	doneIconizing = YES;
 }
 
 - (void) webView:(WebView *)sender didFailLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
 {
-	NSPrintfErr(@" -> FAIL: %@\n    %@\n", self.weblocFilePath, error);
+	if ([error code] == NSURLErrorCancelled)
+		return;
+	NSPrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
 	doneIconizing = YES;
 }
 
