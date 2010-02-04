@@ -5,7 +5,7 @@ setWeblocThumb
 Sets custom icons for .webloc files that display a thumbnail of the
 web page that the URL contained by the file points to.
 
-Copyright (c) 2009 Ali Rantakari (http://hasseg.org)
+Copyright (c) 2009-2010 Ali Rantakari (http://hasseg.org)
 
 --------------
 
@@ -492,7 +492,7 @@ int main(int argc, char *argv[])
 		NSPrintf(@"  -v  makes the output verbose.\n");
 		NSPrintf(@"\n");
 		NSPrintf(@"Version %@\n", versionNumberStr());
-		NSPrintf(@"(c) 2009 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
+		NSPrintf(@"Copyright (c) 2009-2010 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
 		NSPrintf(@"\n");
 		exit(0);
 	}
