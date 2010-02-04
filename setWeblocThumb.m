@@ -34,11 +34,12 @@ under the License.
 #define WEBVIEW_FRAME_RECT		NSMakeRect(0, 0, 700, 700)
 #define WEBVIEW_SCREENSHOT_SIZE	NSMakeSize(1280, 1024)
 #define THUMB_DRAWING_RECT		NSMakeRect(95, 160, 320, 320)
+#define FAVICON_DRAWING_RECT	NSMakeRect(390, 412, 100, 100)
 
 
 const int VERSION_MAJOR = 0;
-const int VERSION_MINOR = 8;
-const int VERSION_BUILD = 6;
+const int VERSION_MINOR = 9;
+const int VERSION_BUILD = 0;
 
 
 NSImage *baseIconImage = nil;
@@ -73,8 +74,20 @@ BOOL fileHasCustomIcon(NSString *filePath)
 
 NSString * getURLOfWeblocFile(NSString *path)
 {
+	// try reading .webloc as plist
+	NSString *ret = nil;
 	NSDictionary *weblocDict = [NSDictionary dictionaryWithContentsOfFile:path];
-	return [weblocDict objectForKey:@"URL"];
+	ret = [weblocDict objectForKey:@"URL"];
+	if (ret != nil)
+		return ret;
+	
+	// if not a plist, try asking Finder (slower)
+	NSDictionary *appleScriptError;
+	NSString *asSource = [NSString stringWithFormat:GETURL_AS_FORMAT_STR, path];
+	NSAppleScript *getURLAppleScript = [[NSAppleScript alloc] initWithSource:asSource];
+	NSAppleEventDescriptor *ed = [getURLAppleScript executeAndReturnError:&appleScriptError];
+	[getURLAppleScript release];
+	return [ed stringValue];
 }
 
 
@@ -142,16 +155,22 @@ void NSPrintfErr(NSString *aStr, ...)
 	WebView *webView;
 	NSString *weblocFilePath;
 	NSString *weblocURL;
+	NSURLConnection *faviconConnection;
+	NSMutableData *faviconData;
+	NSImage *favicon;
 	BOOL doneIconizing;
-	BOOL doneLoading;
+	BOOL doneLoadingPage;
 }
 
 @property(retain) WebView *webView;
 @property(copy) NSString *weblocFilePath;
 @property(copy) NSString *weblocURL;
+@property(retain) NSURLConnection *faviconConnection;
+@property(retain) NSMutableData *faviconData;
+@property(copy) NSImage *favicon;
 
 - (BOOL) doneIconizing;
-- (void) start;
+- (void) startLoadingWithFavicon:(BOOL)loadFavicon;
 - (void) setSelfAsDone;
 - (void) drawAndSetIcon;
 
@@ -162,6 +181,9 @@ void NSPrintfErr(NSString *aStr, ...)
 @synthesize webView;
 @synthesize weblocFilePath;
 @synthesize weblocURL;
+@synthesize faviconConnection;
+@synthesize faviconData;
+@synthesize favicon;
 
 - (id) init
 {
@@ -169,7 +191,7 @@ void NSPrintfErr(NSString *aStr, ...)
 		return nil;
 	
 	doneIconizing = NO;
-	doneLoading = NO;
+	doneLoadingPage = NO;
 	
 	return self;
 }
@@ -179,16 +201,20 @@ void NSPrintfErr(NSString *aStr, ...)
 	self.webView = nil;
 	self.weblocFilePath = nil;
 	self.weblocURL = nil;
+	self.faviconConnection = nil;
+	self.faviconData = nil;
+	self.favicon = nil;
 	[super dealloc];
 }
 
 
-- (void) start
+- (void) startLoadingWithFavicon:(BOOL)loadFavicon
 {
 	VerboseNSPrintf(@"start: %@\n", self.weblocFilePath);
 	
 	NSAssert((self.weblocFilePath != nil), @"self.weblocFilePath is nil");
 	
+	// create webView and start loading the page
 	if (self.webView == nil)
 	{
 		self.webView = [[WebView alloc] init];
@@ -198,17 +224,43 @@ void NSPrintfErr(NSString *aStr, ...)
 		[self.webView setFrameLoadDelegate:self];
 		[self.webView setPreferences:webViewPrefs];
 	}
-	
 	self.weblocURL = getURLOfWeblocFile(weblocFilePath);
 	VerboseNSPrintf(@"  url: %@\n", self.weblocURL);
-	
 	if (self.weblocURL == nil)
 	{
 		NSPrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
 		doneIconizing = YES;
 	}
-	
 	[self.webView setMainFrameURL:self.weblocURL];
+	
+	if (!loadFavicon)
+		return;
+	
+	// get URL for <host_root>/favicon.ico
+	NSURL *faviconURL = [[NSURL URLWithString:self.weblocURL] standardizedURL];
+	NSString *lastRemovedPathComponent = nil; // for safety (yeah I'm paranoid)
+	while([[faviconURL pathComponents] count] > 0)
+	{
+		NSString *thisPathComponent = [[faviconURL pathComponents] lastObject];
+		if ([lastRemovedPathComponent isEqualToString:thisPathComponent])
+			break;
+		faviconURL = [faviconURL URLByDeletingLastPathComponent];
+		lastRemovedPathComponent = thisPathComponent;
+	}
+	faviconURL = [faviconURL URLByAppendingPathComponent:@"favicon.ico"];
+	faviconURL = [faviconURL standardizedURL];
+	
+	// start loading favicon
+	self.faviconData = [NSMutableData data];
+	NSURLRequest *faviconRequest = [NSURLRequest
+		requestWithURL:faviconURL
+		cachePolicy:NSURLRequestReloadIgnoringCacheData
+		timeoutInterval:10.0
+		];
+	self.faviconConnection = [NSURLConnection
+		connectionWithRequest:faviconRequest
+		delegate:self
+		];
 }
 
 - (BOOL) doneIconizing
@@ -228,6 +280,9 @@ void NSPrintfErr(NSString *aStr, ...)
 
 - (void) drawAndSetIcon
 {
+	if (faviconConnection != nil || !doneLoadingPage)
+		return;
+	
 	// get screenshot from webView
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
     [webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
@@ -244,6 +299,19 @@ void NSPrintfErr(NSString *aStr, ...)
 	 fraction:1.0
 	 ];
 	[newIconImage unlockFocus];
+	
+	// draw favicon on top of new icon
+	if (self.favicon != nil)
+	{
+		[newIconImage lockFocus];
+		[favicon
+		 drawInRect:FAVICON_DRAWING_RECT
+		 fromRect:NSZeroRect
+		 operation:NSCompositeCopy
+		 fraction:1.0
+		 ];
+		[newIconImage unlockFocus];
+	}
 	
 	// deal with possible file renames
 	if (![[NSFileManager defaultManager] fileExistsAtPath:self.weblocFilePath])
@@ -301,10 +369,10 @@ void NSPrintfErr(NSString *aStr, ...)
 
 - (void) webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame
 {
-	if ([self.webView isLoading] || doneIconizing || doneLoading)
+	if ([self.webView isLoading] || doneIconizing || doneLoadingPage)
 		return;
 	
-	doneLoading = YES;
+	doneLoadingPage = YES;
 	
 	if (screenshotDelaySec > 0)
 	{
@@ -318,9 +386,10 @@ void NSPrintfErr(NSString *aStr, ...)
 			invocation:invocation
 			repeats:NO
 			];
+		return;
 	}
-	else
-		[self drawAndSetIcon];
+	
+	[self drawAndSetIcon];
 }
 
 - (void) webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
@@ -339,6 +408,45 @@ void NSPrintfErr(NSString *aStr, ...)
 	doneIconizing = YES;
 }
 
+- (void) connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
+{
+	self.faviconConnection = nil;
+	[self drawAndSetIcon];
+}
+
+- (void) connection:(NSURLConnection *)connection didReceiveResponse:(NSHTTPURLResponse *)response
+{
+	if ([response statusCode] >= 400)
+	{
+		[connection cancel];
+		[self
+		 connection:connection
+		 didFailWithError:[NSError
+						   errorWithDomain:@"HTTP Status"
+						   code:500
+						   userInfo:[NSDictionary
+									 dictionaryWithObjectsAndKeys:
+									 NSLocalizedDescriptionKey,
+									 [NSHTTPURLResponse localizedStringForStatusCode:500],
+									 nil]]];
+		return;
+	}
+	
+}
+
+- (void) connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+{
+	[self.faviconData appendData:data];
+}
+
+- (void) connectionDidFinishLoading:(NSURLConnection *)connection
+{
+	self.faviconConnection = nil;
+	self.favicon = [[[NSImage alloc] initWithData:self.faviconData] autorelease];
+	if (self.favicon != nil)
+		VerboseNSPrintf(@" -> got favicon.\n");
+	[self drawAndSetIcon];
+}
 
 @end
 
@@ -366,6 +474,9 @@ int main(int argc, char *argv[])
 		NSPrintf(@"  -f  sets icons also for files that already have a\n");
 		NSPrintf(@"      custom icon (they are ignored by default).\n");
 		NSPrintf(@"\n");
+		NSPrintf(@"  -ni doesn't load the site's favicon image and add it to\n");
+		NSPrintf(@"      the generated icon.\n");
+		NSPrintf(@"\n");
 		NSPrintf(@"  +j  sets Java on when taking screenshots\n");
 		NSPrintf(@"  -j  sets Java off when taking screenshots (default)\n");
 		NSPrintf(@"\n");
@@ -390,6 +501,7 @@ int main(int argc, char *argv[])
 	BOOL arg_allowPlugins = NO;
 	BOOL arg_allowJava = NO;
 	BOOL arg_allowJavaScript = YES;
+	BOOL arg_favicon = YES;
 	NSMutableArray *weblocFilePaths = [NSMutableArray array];
 	
 	NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
@@ -403,6 +515,8 @@ int main(int argc, char *argv[])
 				arg_forceRun = YES;
 			else if (strcmp(argv[i], "-v") == 0)
 				arg_verbose = YES;
+			else if (strcmp(argv[i], "-ni") == 0)
+				arg_favicon = NO;
 			else if (strcmp(argv[i], "-js") == 0)
 				arg_allowJavaScript = NO;
 			else if (strcmp(argv[i], "+js") == 0)
@@ -489,7 +603,7 @@ int main(int argc, char *argv[])
 	WeblocIconifier *aWeblocIconifier;
 	for (aWeblocIconifier in weblocIconifiers)
 	{
-		[aWeblocIconifier start];
+		[aWeblocIconifier startLoadingWithFavicon:arg_favicon];
 	}
 	
 	
