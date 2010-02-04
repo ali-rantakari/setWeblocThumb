@@ -39,7 +39,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 9;
-const int VERSION_BUILD = 0;
+const int VERSION_BUILD = 1;
 
 
 NSImage *baseIconImage = nil;
@@ -307,7 +307,7 @@ void NSPrintfErr(NSString *aStr, ...)
 		[favicon
 		 drawInRect:FAVICON_DRAWING_RECT
 		 fromRect:NSZeroRect
-		 operation:NSCompositeCopy
+		 operation:NSCompositeSourceOver
 		 fraction:1.0
 		 ];
 		[newIconImage unlockFocus];
