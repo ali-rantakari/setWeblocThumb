@@ -39,7 +39,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 9;
-const int VERSION_BUILD = 1;
+const int VERSION_BUILD = 2;
 
 
 NSImage *baseIconImage = nil;
