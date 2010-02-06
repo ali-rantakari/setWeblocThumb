@@ -219,6 +219,7 @@ void NSPrintfErr(NSString *aStr, ...)
 	{
 		self.webView = [[WebView alloc] init];
 		[self.webView setFrame:WEBVIEW_FRAME_RECT];
+		[[[self.webView mainFrame] frameView] setAllowsScrolling:NO];
 		[self.webView setDrawsBackground:YES];
 		[self.webView setFrameLoadDelegate:self];
 		[self.webView setFrameLoadDelegate:self];
