@@ -238,17 +238,11 @@ void NSPrintfErr(NSString *aStr, ...)
 	
 	// get URL for <host_root>/favicon.ico
 	NSURL *faviconURL = [[NSURL URLWithString:self.weblocURL] standardizedURL];
-	NSString *lastRemovedPathComponent = nil; // for safety (yeah I'm paranoid)
 	while([[faviconURL pathComponents] count] > 0)
 	{
-		NSString *thisPathComponent = [[faviconURL pathComponents] lastObject];
-		if ([lastRemovedPathComponent isEqualToString:thisPathComponent])
-			break;
-		faviconURL = [faviconURL URLByDeletingLastPathComponent];
-		lastRemovedPathComponent = thisPathComponent;
+		faviconURL = [[faviconURL URLByDeletingLastPathComponent] standardizedURL];
 	}
-	faviconURL = [faviconURL URLByAppendingPathComponent:@"favicon.ico"];
-	faviconURL = [faviconURL standardizedURL];
+	faviconURL = [[faviconURL URLByAppendingPathComponent:@"favicon.ico"] standardizedURL];
 	
 	// start loading favicon
 	self.faviconData = [NSMutableData data];
