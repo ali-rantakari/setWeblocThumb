@@ -222,7 +222,6 @@ void NSPrintfErr(NSString *aStr, ...)
 		[[[self.webView mainFrame] frameView] setAllowsScrolling:NO];
 		[self.webView setDrawsBackground:YES];
 		[self.webView setFrameLoadDelegate:self];
-		[self.webView setFrameLoadDelegate:self];
 		[self.webView setPreferences:webViewPrefs];
 	}
 	self.weblocURL = getURLOfWeblocFile(weblocFilePath);
