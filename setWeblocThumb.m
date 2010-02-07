@@ -155,23 +155,21 @@ void NSPrintfErr(NSString *aStr, ...)
 	WebView *webView;
 	NSString *weblocFilePath;
 	NSString *weblocURL;
-	NSURLConnection *faviconConnection;
-	NSMutableData *faviconData;
 	NSImage *favicon;
 	BOOL doneIconizing;
 	BOOL doneLoadingPage;
+	BOOL loadFavicon;
 }
 
 @property(retain) WebView *webView;
 @property(copy) NSString *weblocFilePath;
 @property(copy) NSString *weblocURL;
-@property(retain) NSURLConnection *faviconConnection;
-@property(retain) NSMutableData *faviconData;
 @property(copy) NSImage *favicon;
 
 - (BOOL) doneIconizing;
-- (void) startLoadingWithFavicon:(BOOL)loadFavicon;
+- (void) startLoadingWithFavicon:(BOOL)aLoadFavicon;
 - (void) setSelfAsDone;
+- (void) doneLoading;
 - (void) drawAndSetIcon;
 
 @end
@@ -181,8 +179,6 @@ void NSPrintfErr(NSString *aStr, ...)
 @synthesize webView;
 @synthesize weblocFilePath;
 @synthesize weblocURL;
-@synthesize faviconConnection;
-@synthesize faviconData;
 @synthesize favicon;
 
 - (id) init
@@ -192,6 +188,7 @@ void NSPrintfErr(NSString *aStr, ...)
 	
 	doneIconizing = NO;
 	doneLoadingPage = NO;
+	loadFavicon = NO;
 	
 	return self;
 }
@@ -201,18 +198,18 @@ void NSPrintfErr(NSString *aStr, ...)
 	self.webView = nil;
 	self.weblocFilePath = nil;
 	self.weblocURL = nil;
-	self.faviconConnection = nil;
-	self.faviconData = nil;
 	self.favicon = nil;
 	[super dealloc];
 }
 
 
-- (void) startLoadingWithFavicon:(BOOL)loadFavicon
+- (void) startLoadingWithFavicon:(BOOL)aLoadFavicon
 {
 	VerboseNSPrintf(@"start: %@\n", self.weblocFilePath);
 	
 	NSAssert((self.weblocFilePath != nil), @"self.weblocFilePath is nil");
+	
+	loadFavicon = aLoadFavicon;
 	
 	// create webView and start loading the page
 	if (self.webView == nil)
@@ -232,29 +229,6 @@ void NSPrintfErr(NSString *aStr, ...)
 		doneIconizing = YES;
 	}
 	[self.webView setMainFrameURL:self.weblocURL];
-	
-	if (!loadFavicon)
-		return;
-	
-	// get URL for <host_root>/favicon.ico
-	NSURL *faviconURL = [[NSURL URLWithString:self.weblocURL] standardizedURL];
-	while([[faviconURL pathComponents] count] > 0)
-	{
-		faviconURL = [[faviconURL URLByDeletingLastPathComponent] standardizedURL];
-	}
-	faviconURL = [[faviconURL URLByAppendingPathComponent:@"favicon.ico"] standardizedURL];
-	
-	// start loading favicon
-	self.faviconData = [NSMutableData data];
-	NSURLRequest *faviconRequest = [NSURLRequest
-		requestWithURL:faviconURL
-		cachePolicy:NSURLRequestReloadIgnoringCacheData
-		timeoutInterval:10.0
-		];
-	self.faviconConnection = [NSURLConnection
-		connectionWithRequest:faviconRequest
-		delegate:self
-		];
 }
 
 - (BOOL) doneIconizing
@@ -270,13 +244,17 @@ void NSPrintfErr(NSString *aStr, ...)
 
 
 
+- (void) doneLoading
+{
+	if (!doneLoadingPage)
+		return;
+	
+	[self drawAndSetIcon];
+}
 
 
 - (void) drawAndSetIcon
 {
-	if (faviconConnection != nil || !doneLoadingPage)
-		return;
-	
 	// get screenshot from webView
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
     [webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
@@ -371,10 +349,10 @@ void NSPrintfErr(NSString *aStr, ...)
 	if (screenshotDelaySec > 0)
 	{
 		NSInvocation *invocation = [NSInvocation
-			invocationWithMethodSignature:[self methodSignatureForSelector:@selector(drawAndSetIcon)]
+			invocationWithMethodSignature:[self methodSignatureForSelector:@selector(doneLoading)]
 			];
 		[invocation setTarget:self];
-		[invocation setSelector:@selector(drawAndSetIcon)];
+		[invocation setSelector:@selector(doneLoading)];
 		[NSTimer
 			scheduledTimerWithTimeInterval:screenshotDelaySec
 			invocation:invocation
@@ -383,7 +361,7 @@ void NSPrintfErr(NSString *aStr, ...)
 		return;
 	}
 	
-	[self drawAndSetIcon];
+	[self doneLoading];
 }
 
 - (void) webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
@@ -402,44 +380,13 @@ void NSPrintfErr(NSString *aStr, ...)
 	doneIconizing = YES;
 }
 
-- (void) connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
+- (void) webView:(WebView *)sender didReceiveIcon:(NSImage *)image forFrame:(WebFrame *)frame
 {
-	self.faviconConnection = nil;
-	[self drawAndSetIcon];
-}
-
-- (void) connection:(NSURLConnection *)connection didReceiveResponse:(NSHTTPURLResponse *)response
-{
-	if ([response statusCode] >= 400)
-	{
-		[connection cancel];
-		[self
-		 connection:connection
-		 didFailWithError:[NSError
-						   errorWithDomain:@"HTTP Status"
-						   code:500
-						   userInfo:[NSDictionary
-									 dictionaryWithObjectsAndKeys:
-									 NSLocalizedDescriptionKey,
-									 [NSHTTPURLResponse localizedStringForStatusCode:500],
-									 nil]]];
+	if (!loadFavicon)
 		return;
-	}
-	
-}
-
-- (void) connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
-{
-	[self.faviconData appendData:data];
-}
-
-- (void) connectionDidFinishLoading:(NSURLConnection *)connection
-{
-	self.faviconConnection = nil;
-	self.favicon = [[[NSImage alloc] initWithData:self.faviconData] autorelease];
-	if (self.favicon != nil)
-		VerboseNSPrintf(@" -> got favicon.\n");
-	[self drawAndSetIcon];
+	VerboseNSPrintf(@" -> got a favicon.\n");
+	self.favicon = image;
+	[self doneLoading];
 }
 
 @end
