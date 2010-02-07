@@ -92,8 +92,8 @@ NSString * getURLOfWeblocFile(NSString *path)
 
 
 
-// other NSPrintf functions call this, and you call them
-void RealNSPrintf(NSString *aStr, va_list args)
+// other Printf functions call this, and you call them
+void RealPrintf(NSString *aStr, va_list args)
 {
 	NSString *str = [
 		[[NSString alloc]
@@ -106,25 +106,25 @@ void RealNSPrintf(NSString *aStr, va_list args)
 	[str writeToFile:@"/dev/stdout" atomically:NO encoding:NSUTF8StringEncoding error:NULL];
 }
 
-void VerboseNSPrintf(NSString *aStr, ...)
+void VerbosePrintf(NSString *aStr, ...)
 {
 	if (!arg_verbose)
 		return;
 	va_list argList;
 	va_start(argList, aStr);
-	RealNSPrintf(aStr, argList);
+	RealPrintf(aStr, argList);
 	va_end(argList);
 }
 
-void NSPrintf(NSString *aStr, ...)
+void Printf(NSString *aStr, ...)
 {
 	va_list argList;
 	va_start(argList, aStr);
-	RealNSPrintf(aStr, argList);
+	RealPrintf(aStr, argList);
 	va_end(argList);
 }
 
-void NSPrintfErr(NSString *aStr, ...)
+void PrintfErr(NSString *aStr, ...)
 {
 	va_list argList;
 	va_start(argList, aStr);
@@ -205,7 +205,7 @@ void NSPrintfErr(NSString *aStr, ...)
 
 - (void) startLoadingWithFavicon:(BOOL)aLoadFavicon
 {
-	VerboseNSPrintf(@"start: %@\n", self.weblocFilePath);
+	VerbosePrintf(@"start: %@\n", self.weblocFilePath);
 	
 	NSAssert((self.weblocFilePath != nil), @"self.weblocFilePath is nil");
 	
@@ -222,10 +222,10 @@ void NSPrintfErr(NSString *aStr, ...)
 		[self.webView setPreferences:webViewPrefs];
 	}
 	self.weblocURL = getURLOfWeblocFile(weblocFilePath);
-	VerboseNSPrintf(@"  url: %@\n", self.weblocURL);
+	VerbosePrintf(@"  url: %@\n", self.weblocURL);
 	if (self.weblocURL == nil)
 	{
-		NSPrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
+		PrintfErr(@" -> cannot get URL for: %@\n", self.weblocFilePath);
 		doneIconizing = YES;
 	}
 	[self.webView setMainFrameURL:self.weblocURL];
@@ -239,7 +239,7 @@ void NSPrintfErr(NSString *aStr, ...)
 - (void) setSelfAsDone
 {
 	doneIconizing = YES;
-	VerboseNSPrintf(@" -> done: %@\n", self.weblocFilePath);
+	VerbosePrintf(@" -> done: %@\n", self.weblocFilePath);
 }
 
 
@@ -288,7 +288,7 @@ void NSPrintfErr(NSString *aStr, ...)
 	// deal with possible file renames
 	if (![[NSFileManager defaultManager] fileExistsAtPath:self.weblocFilePath])
 	{
-		VerboseNSPrintf(@" -> can't find file (renamed?). searching in containing folder.\n");
+		VerbosePrintf(@" -> can't find file (renamed?). searching in containing folder.\n");
 		
 		// file can't be found; go through containing folder
 		// and try to find .webloc files that point to the same
@@ -314,7 +314,7 @@ void NSPrintfErr(NSString *aStr, ...)
 					&& !fileHasCustomIcon(aFilePath)
 					)
 				{
-					VerboseNSPrintf(@"    found file with matching URL:\n      %@\n", aFilePath);
+					VerbosePrintf(@"    found file with matching URL:\n      %@\n", aFilePath);
 					self.weblocFilePath = aFilePath;
 					break;
 				}
@@ -324,7 +324,7 @@ void NSPrintfErr(NSString *aStr, ...)
 	
 	if (self.weblocFilePath == nil)
 	{
-		NSPrintfErr(@" -> FAIL: Cannot find file. Must have been moved.\n");
+		PrintfErr(@" -> FAIL: Cannot find file. Must have been moved.\n");
 		doneIconizing = YES;
 		return;
 	}
@@ -368,7 +368,7 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	if ([error code] == NSURLErrorCancelled)
 		return;
-	NSPrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
+	PrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
 	doneIconizing = YES;
 }
 
@@ -376,7 +376,7 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	if ([error code] == NSURLErrorCancelled)
 		return;
-	NSPrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
+	PrintfErr(@" -> FAIL: %@\n    %@\n    %@\n    %@\n", self.weblocFilePath, self.weblocURL, error, error.userInfo);
 	doneIconizing = YES;
 }
 
@@ -384,7 +384,7 @@ void NSPrintfErr(NSString *aStr, ...)
 {
 	if (!loadFavicon)
 		return;
-	VerboseNSPrintf(@" -> got a favicon.\n");
+	VerbosePrintf(@" -> got a favicon.\n");
 	self.favicon = image;
 	[self doneLoading];
 }
@@ -402,39 +402,39 @@ int main(int argc, char *argv[])
 	char *myBasename = basename(argv[0]);
 	if (argc == 1)
 	{
-		NSPrintf(@"usage: %s [options] <path>\n", myBasename);
-		NSPrintf(@"\n");
-		NSPrintf(@"  Sets custom icons for .webloc files that display\n");
-		NSPrintf(@"  a thumbnail of the web page that they point to.\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  <path> may point to a .webloc file or a directory\n");
-		NSPrintf(@"  that contains .webloc files.\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  [options:]\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  -f  sets icons also for files that already have a\n");
-		NSPrintf(@"      custom icon (they are ignored by default).\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  -ni doesn't load the site's favicon image and add it to\n");
-		NSPrintf(@"      the generated icon.\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  +j  sets Java on when taking screenshots\n");
-		NSPrintf(@"  -j  sets Java off when taking screenshots (default)\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  +js sets JavaScript on when taking screenshots (default)\n");
-		NSPrintf(@"  -js sets JavaScript off when taking screenshots\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  +p  sets browser plugins on when taking screenshots\n");
-		NSPrintf(@"  -p  sets browser plugins off when taking screenshots (default)\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  -d <sec>  waits for <sec> seconds before taking the\n");
-		NSPrintf(@"            screenshots.\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"  -v  makes the output verbose.\n");
-		NSPrintf(@"\n");
-		NSPrintf(@"Version %@\n", versionNumberStr());
-		NSPrintf(@"Copyright (c) 2009-2010 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
-		NSPrintf(@"\n");
+		Printf(@"usage: %s [options] <path>\n", myBasename);
+		Printf(@"\n");
+		Printf(@"  Sets custom icons for .webloc files that display\n");
+		Printf(@"  a thumbnail of the web page that they point to.\n");
+		Printf(@"\n");
+		Printf(@"  <path> may point to a .webloc file or a directory\n");
+		Printf(@"  that contains .webloc files.\n");
+		Printf(@"\n");
+		Printf(@"  [options:]\n");
+		Printf(@"\n");
+		Printf(@"  -f  sets icons also for files that already have a\n");
+		Printf(@"      custom icon (they are ignored by default).\n");
+		Printf(@"\n");
+		Printf(@"  -ni doesn't load the site's favicon image and add it to\n");
+		Printf(@"      the generated icon.\n");
+		Printf(@"\n");
+		Printf(@"  +j  sets Java on when taking screenshots\n");
+		Printf(@"  -j  sets Java off when taking screenshots (default)\n");
+		Printf(@"\n");
+		Printf(@"  +js sets JavaScript on when taking screenshots (default)\n");
+		Printf(@"  -js sets JavaScript off when taking screenshots\n");
+		Printf(@"\n");
+		Printf(@"  +p  sets browser plugins on when taking screenshots\n");
+		Printf(@"  -p  sets browser plugins off when taking screenshots (default)\n");
+		Printf(@"\n");
+		Printf(@"  -d <sec>  waits for <sec> seconds before taking the\n");
+		Printf(@"            screenshots.\n");
+		Printf(@"\n");
+		Printf(@"  -v  makes the output verbose.\n");
+		Printf(@"\n");
+		Printf(@"Version %@\n", versionNumberStr());
+		Printf(@"Copyright (c) 2009-2010 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
+		Printf(@"\n");
 		exit(0);
 	}
 	
@@ -478,12 +478,12 @@ int main(int argc, char *argv[])
 	BOOL isDir = NO;
 	if (![[NSFileManager defaultManager] fileExistsAtPath:providedPath isDirectory:&isDir])
 	{
-		NSPrintfErr(@"Error: provided path does not exist:\n%s\n\n", [providedPath UTF8String]);
+		PrintfErr(@"Error: provided path does not exist:\n%s\n\n", [providedPath UTF8String]);
 		exit(1);
 	}
 	if (!isDir && ![[providedPath pathExtension] isEqualToString:@"webloc"])
 	{
-		NSPrintfErr(@"Error: specified filename does not have extension: .webloc\n\n");
+		PrintfErr(@"Error: specified filename does not have extension: .webloc\n\n");
 		exit(1);
 	}
 	
@@ -524,7 +524,7 @@ int main(int argc, char *argv[])
 	for (aFilePath in weblocFilePaths)
 	{
 		if (!arg_forceRun && fileHasCustomIcon(aFilePath))
-			VerboseNSPrintf(@"File already has a custom icon: %@\n", aFilePath);
+			VerbosePrintf(@"File already has a custom icon: %@\n", aFilePath);
 		else
 		{
 			WeblocIconifier *weblocIconifier = [[[WeblocIconifier alloc] init] autorelease];
