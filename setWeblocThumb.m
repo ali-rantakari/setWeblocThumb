@@ -83,7 +83,8 @@ NSString * getURLOfWeblocFile(NSString *path)
 	
 	// if not a plist, try asking Finder (slower)
 	NSDictionary *appleScriptError;
-	NSString *asSource = [NSString stringWithFormat:GETURL_AS_FORMAT_STR, path];
+	NSString *escapedPath = [path stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
+	NSString *asSource = [NSString stringWithFormat:GETURL_AS_FORMAT_STR, escapedPath];
 	NSAppleScript *getURLAppleScript = [[NSAppleScript alloc] initWithSource:asSource];
 	NSAppleEventDescriptor *ed = [getURLAppleScript executeAndReturnError:&appleScriptError];
 	[getURLAppleScript release];
