@@ -32,7 +32,7 @@ under the License.
 
 #define GETURL_AS_FORMAT_STR	@"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
 #define WEBVIEW_FRAME_RECT		NSMakeRect(0, 0, 700, 700)
-#define WEBVIEW_SCREENSHOT_SIZE	NSMakeSize(1280, 1024)
+#define WEBVIEW_SCREENSHOT_SIZE NSMakeSize(1280, 1024)
 #define THUMB_DRAWING_RECT		NSMakeRect(95, 160, 320, 320)
 #define FAVICON_DRAWING_RECT	NSMakeRect(390, 412, 100, 100)
 
@@ -264,19 +264,19 @@ void PrintfErr(NSString *aStr, ...)
 {
 	// get screenshot from webView
 	NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
-    [webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
-    NSImage *webViewImage = [[NSImage alloc] initWithSize:WEBVIEW_SCREENSHOT_SIZE];
-    [webViewImage addRepresentation:webViewImageRep];
+	[webView cacheDisplayInRect:[webView frame] toBitmapImageRep:webViewImageRep];
+	NSImage *webViewImage = [[NSImage alloc] initWithSize:WEBVIEW_SCREENSHOT_SIZE];
+	[webViewImage addRepresentation:webViewImageRep];
 	
-    // draw screenshot on top of base image
+	// draw screenshot on top of base image
 	NSImage *newIconImage = [[baseIconImage copy] autorelease];
 	[newIconImage lockFocus];
 	[webViewImage
-	 drawInRect:THUMB_DRAWING_RECT
-	 fromRect:NSZeroRect
-	 operation:NSCompositeCopy
-	 fraction:1.0
-	 ];
+		drawInRect:THUMB_DRAWING_RECT
+		fromRect:NSZeroRect
+		operation:NSCompositeCopy
+		fraction:1.0
+		];
 	[newIconImage unlockFocus];
 	[webViewImage release];
 	
@@ -285,11 +285,11 @@ void PrintfErr(NSString *aStr, ...)
 	{
 		[newIconImage lockFocus];
 		[favicon
-		 drawInRect:FAVICON_DRAWING_RECT
-		 fromRect:NSZeroRect
-		 operation:NSCompositeSourceOver
-		 fraction:1.0
-		 ];
+			drawInRect:FAVICON_DRAWING_RECT
+			fromRect:NSZeroRect
+			operation:NSCompositeSourceOver
+			fraction:1.0
+			];
 		[newIconImage unlockFocus];
 	}
 	
@@ -307,7 +307,7 @@ void PrintfErr(NSString *aStr, ...)
 		
 		// in desperation, go through containing folder 
 		// and try to find .webloc files that point to the same
-		// URL we have and don't have icons
+		// URL we have and that don't have icons
 		// 
 		NSString *parentDirPath = [resolvedWeblocFilePath stringByDeletingLastPathComponent];
 		NSArray *parentDirContents = [[NSFileManager defaultManager]
@@ -345,10 +345,10 @@ void PrintfErr(NSString *aStr, ...)
 	
 	// set icon to file
 	[[NSWorkspace sharedWorkspace]
-	 setIcon:newIconImage
-	 forFile:resolvedWeblocFilePath
-	 options:0
-	 ];
+		setIcon:newIconImage
+		forFile:resolvedWeblocFilePath
+		options:0
+		];
 	
 	[self setSelfAsDone];
 }
