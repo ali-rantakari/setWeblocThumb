@@ -39,7 +39,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 9;
-const int VERSION_BUILD = 3;
+const int VERSION_BUILD = 4;
 
 
 NSImage *baseIconImage = nil;
@@ -278,6 +278,7 @@ void PrintfErr(NSString *aStr, ...)
 	 fraction:1.0
 	 ];
 	[newIconImage unlockFocus];
+	[webViewImage release];
 	
 	// draw favicon on top of new icon
 	if (self.favicon != nil)
