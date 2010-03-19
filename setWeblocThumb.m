@@ -159,6 +159,7 @@ void PrintfErr(NSString *aStr, ...)
 	BOOL doneIconizing;
 	BOOL doneLoadingPage;
 	BOOL loadFavicon;
+	AliasHandle fileAliasHandle;
 }
 
 @property(retain) WebView *webView;
@@ -171,6 +172,8 @@ void PrintfErr(NSString *aStr, ...)
 - (void) setSelfAsDone;
 - (void) doneLoading;
 - (void) drawAndSetIcon;
+- (BOOL) saveAliasOfPath:(NSString *)path;
+- (NSString *) pathFromSavedAlias;
 
 @end
 
@@ -189,6 +192,7 @@ void PrintfErr(NSString *aStr, ...)
 	doneIconizing = NO;
 	doneLoadingPage = NO;
 	loadFavicon = NO;
+	fileAliasHandle = NULL;
 	
 	return self;
 }
@@ -199,6 +203,7 @@ void PrintfErr(NSString *aStr, ...)
 	self.weblocFilePath = nil;
 	self.weblocURL = nil;
 	self.favicon = nil;
+	fileAliasHandle = NULL;
 	[super dealloc];
 }
 
@@ -208,6 +213,8 @@ void PrintfErr(NSString *aStr, ...)
 	VerbosePrintf(@"start: %@\n", self.weblocFilePath);
 	
 	NSAssert((self.weblocFilePath != nil), @"self.weblocFilePath is nil");
+	
+	[self saveAliasOfPath:self.weblocFilePath];
 	
 	loadFavicon = aLoadFavicon;
 	
@@ -285,23 +292,29 @@ void PrintfErr(NSString *aStr, ...)
 		[newIconImage unlockFocus];
 	}
 	
-	// deal with possible file renames
-	if (![[NSFileManager defaultManager] fileExistsAtPath:self.weblocFilePath])
+	
+	// resolve the file's alias handle (in case the
+	// file has been moved within the same filesystem)
+	NSString *resolvedWeblocFilePath = [self pathFromSavedAlias];
+	if (resolvedWeblocFilePath == nil)
+		resolvedWeblocFilePath = self.weblocFilePath;
+	
+	if (![[NSFileManager defaultManager] fileExistsAtPath:resolvedWeblocFilePath])
 	{
-		VerbosePrintf(@" -> can't find file (renamed?). searching in containing folder.\n");
+		VerbosePrintf(@" -> can't find file even through its alias handle (moved to another volume?).\n");
+		VerbosePrintf(@"    searching in containing folder for .weblocs with the same URL.\n");
 		
-		// file can't be found; go through containing folder
+		// in desperation, go through containing folder 
 		// and try to find .webloc files that point to the same
-		// URL we have and don't have icons (this should be the
-		// case if the file has simply been renamed)
+		// URL we have and don't have icons
 		// 
-		NSString *parentDirPath = [self.weblocFilePath stringByDeletingLastPathComponent];
+		NSString *parentDirPath = [resolvedWeblocFilePath stringByDeletingLastPathComponent];
 		NSArray *parentDirContents = [[NSFileManager defaultManager]
 			contentsOfDirectoryAtPath:parentDirPath
 			error:NULL
 			];
 		
-		self.weblocFilePath = nil;
+		resolvedWeblocFilePath = nil;
 		
 		if (parentDirContents != nil)
 		{
@@ -315,16 +328,16 @@ void PrintfErr(NSString *aStr, ...)
 					)
 				{
 					VerbosePrintf(@"    found file with matching URL:\n      %@\n", aFilePath);
-					self.weblocFilePath = aFilePath;
+					resolvedWeblocFilePath = aFilePath;
 					break;
 				}
 			}
 		}
 	}
 	
-	if (self.weblocFilePath == nil)
+	if (resolvedWeblocFilePath == nil)
 	{
-		PrintfErr(@" -> FAIL: Cannot find file. Must have been moved.\n");
+		PrintfErr(@" -> FAIL: Cannot find file. Must have been moved to another volume or deleted.\n");
 		doneIconizing = YES;
 		return;
 	}
@@ -332,7 +345,7 @@ void PrintfErr(NSString *aStr, ...)
 	// set icon to file
 	[[NSWorkspace sharedWorkspace]
 	 setIcon:newIconImage
-	 forFile:self.weblocFilePath
+	 forFile:resolvedWeblocFilePath
 	 options:0
 	 ];
 	
@@ -389,7 +402,57 @@ void PrintfErr(NSString *aStr, ...)
 	[self doneLoading];
 }
 
+- (BOOL) saveAliasOfPath:(NSString *)path
+{
+	OSErr r = FSNewAliasFromPath(
+		NULL,	// relative search root
+		[path fileSystemRepresentation], // input path
+		0,					// options
+		&fileAliasHandle,	// output AliasHandle
+		false				// is a dir?
+		);
+	if (r != noErr)
+	{
+		fileAliasHandle = NULL;
+		return NO;
+	}
+	return YES;
+}
+
+- (NSString *) pathFromSavedAlias
+{
+	if (fileAliasHandle == NULL)
+		return nil;
+	
+	// resolve alias
+	Boolean wasChanged = false;
+	FSRef fsRef;
+	OSErr r = FSResolveAlias(
+		NULL,			// relative search root
+		fileAliasHandle,// input AliasHandle
+		&fsRef,			// output FSRef
+		&wasChanged		// has the file moved?
+		);
+	if (r != noErr) // probably fnfErr
+		return nil;
+	
+	// FSRef -> NSString
+	CFURLRef url = CFURLCreateFromFSRef(kCFAllocatorDefault, &fsRef);
+	NSString* path = [(NSURL *)url path];
+	CFRelease(url);
+	
+	if (wasChanged)
+		VerbosePrintf(@" -> file had moved: %@\n", path);
+	
+	return path;
+}
+
 @end
+
+
+
+
+
 
 
 
