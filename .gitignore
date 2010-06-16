@@ -3,3 +3,4 @@ setWeblocThumb
 usage.txt
 deploymentScpTarget
 deployment/*
+*.plist
