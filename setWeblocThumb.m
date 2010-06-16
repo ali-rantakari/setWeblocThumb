@@ -28,6 +28,9 @@ under the License.
 #import <Webkit/Webkit.h>
 #import "MBBase64.h"
 #import "imgBase64.m"
+#import "HGCLIUtils.h"
+#import "HGCLIAutoUpdater.h"
+#import "SetWeblocThumbAutoUpdaterDelegate.h"
 
 
 #define GETURL_AS_FORMAT_STR	@"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
@@ -39,7 +42,7 @@ under the License.
 
 const int VERSION_MAJOR = 0;
 const int VERSION_MINOR = 9;
-const int VERSION_BUILD = 6;
+const int VERSION_BUILD = 7;
 
 
 NSImage *baseIconImage = nil;
@@ -93,40 +96,10 @@ NSString * getURLOfWeblocFile(NSString *path)
 
 
 
-// other Printf functions call this, and you call them
-void RealPrintf(NSString *aStr, va_list args)
-{
-	NSString *str = [
-		[[NSString alloc]
-			initWithFormat:aStr
-			locale:[[NSUserDefaults standardUserDefaults] dictionaryRepresentation]
-			arguments:args
-			] autorelease
-		];
-	
-	[str writeToFile:@"/dev/stdout" atomically:NO encoding:NSUTF8StringEncoding error:NULL];
-}
-
 void VerbosePrintf(NSString *aStr, ...)
 {
 	if (!arg_verbose)
 		return;
-	va_list argList;
-	va_start(argList, aStr);
-	RealPrintf(aStr, argList);
-	va_end(argList);
-}
-
-void Printf(NSString *aStr, ...)
-{
-	va_list argList;
-	va_start(argList, aStr);
-	RealPrintf(aStr, argList);
-	va_end(argList);
-}
-
-void PrintfErr(NSString *aStr, ...)
-{
 	va_list argList;
 	va_start(argList, aStr);
 	NSString *str = [
@@ -138,7 +111,7 @@ void PrintfErr(NSString *aStr, ...)
 		];
 	va_end(argList);
 	
-	[str writeToFile:@"/dev/stderr" atomically:NO encoding:NSUTF8StringEncoding error:NULL];
+	[str writeToFile:@"/dev/stdout" atomically:NO encoding:outputStrEncoding error:NULL];
 }
 
 
@@ -462,7 +435,7 @@ int main(int argc, char *argv[])
 {
 	NSAutoreleasePool *autoReleasePool = [[NSAutoreleasePool alloc] init];
 	
-	NSApplicationLoad(); // initialize some Cocoa stuff
+	NSApplicationLoad(); // initialize some Cocoa stuff needed by the WebView
 	
 	char *myBasename = basename(argv[0]);
 	if (argc == 1)
@@ -476,6 +449,8 @@ int main(int argc, char *argv[])
 		Printf(@"  that contains .webloc files.\n");
 		Printf(@"\n");
 		Printf(@"  [options:]\n");
+		Printf(@"\n");
+		Printf(@"  -u  check for updates (and optionally auto-update self)\n");
 		Printf(@"\n");
 		Printf(@"  -f  sets icons also for files that already have a\n");
 		Printf(@"      custom icon (they are ignored by default).\n");
@@ -503,6 +478,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 	
+	BOOL arg_autoUpdate = NO;
 	BOOL arg_forceRun = NO;
 	BOOL arg_allowPlugins = NO;
 	BOOL arg_allowJava = NO;
@@ -512,10 +488,13 @@ int main(int argc, char *argv[])
 	
 	NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
 	
+	if (strcmp(argv[1], "-u") == 0)
+		arg_autoUpdate = YES;
+	
 	if (argc > 2)
 	{
 		int i;
-		for (i = 0; i < argc; i++)
+		for (i = 1; i < argc; i++)
 		{
 			if (strcmp(argv[i], "-f") == 0)
 				arg_forceRun = YES;
@@ -539,6 +518,21 @@ int main(int argc, char *argv[])
 				screenshotDelaySec = abs([[NSString stringWithCString:argv[i+1] encoding:NSUTF8StringEncoding] doubleValue]);
 		}
 	}
+	
+	
+	if (arg_autoUpdate)
+	{
+		HGCLIAutoUpdater *autoUpdater = [[[HGCLIAutoUpdater alloc]
+			initWithAppName:@"setWeblocThumb"
+			currentVersionStr:versionNumberStr()
+			] autorelease];
+		SetWeblocThumbAutoUpdaterDelegate *autoUpdaterDelegate = [[[SetWeblocThumbAutoUpdaterDelegate alloc] init] autorelease];
+		autoUpdater.delegate = autoUpdaterDelegate;
+		
+		[autoUpdater checkForUpdatesWithUI];
+		return 0;
+	}
+	
 	
 	BOOL isDir = NO;
 	if (![[NSFileManager defaultManager] fileExistsAtPath:providedPath isDirectory:&isDir])

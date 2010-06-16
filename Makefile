@@ -15,7 +15,13 @@ VERSIONCHANGELOGFILELOC="$(TEMP_DEPLOYMENT_DIR)/changelog.html"
 GENERALCHANGELOGFILELOC="changelog.html"
 SCP_TARGET=$(shell cat ./deploymentScpTarget)
 DEPLOYMENT_INCLUDES_DIR="./deployment-files"
-COMPILER="/Developer/usr/bin/clang"
+
+COMPILER_GCC="gcc"
+COMPILER_CLANG="/Developer/usr/bin/clang"
+COMPILER=$(COMPILER_CLANG)
+
+
+SOURCE_FILES=setWeblocThumb.m MBBase64.m ANSIEscapeHelper.m HGCLIUtils.m HGCLIAutoUpdater.m HGCLIAutoUpdaterDelegate.m SetWeblocThumbAutoUpdaterDelegate.m
 
 
 
@@ -49,11 +55,24 @@ imgBase64.m: webloc.png
 #-------------------------------------------------------------------------
 # compile the binary itself
 #-------------------------------------------------------------------------
-setWeblocThumb: imgBase64.m setWeblocThumb.m MBBase64.m
+setWeblocThumb: $(SOURCE_FILES) imgBase64.m
 	@echo
 	@echo ---- Compiling:
 	@echo ======================================
-	$(COMPILER) -O3 -Wall -force_cpusubtype_ALL -mmacosx-version-min=10.5 -arch i386 -arch ppc -framework Cocoa -framework WebKit -o $@ setWeblocThumb.m MBBase64.m
+	$(COMPILER) -O3 -Wall -force_cpusubtype_ALL -mmacosx-version-min=10.5 -arch i386 -arch ppc -framework Cocoa -framework WebKit -o $@ $(SOURCE_FILES)
+
+
+
+
+#-------------------------------------------------------------------------
+#-------------------------------------------------------------------------
+# run clang static analyzer
+#-------------------------------------------------------------------------
+analyze:
+	@echo
+	@echo ---- Analyzing:
+	@echo ======================================
+	$(COMPILER_CLANG) --analyze $(SOURCE_FILES)
 
 
 
