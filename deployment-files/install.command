@@ -21,10 +21,10 @@ echo "================================="
 echo
 echo "This script will install:"
 echo
-echo -e "setWeblocThumb executable to: \e[36m${BINDIR}\e[m"
+printf "setWeblocThumb executable to: \e[36m${BINDIR}\e[m\n"
 echo
-echo -e "We'll need administrator rights to install to this location so \e[33mplease enter your admin password when asked\e[m."
-echo -e "\e[1mPress any key to continue installing or Ctrl-C to cancel.\e[m"
+echo $'We\'ll need administrator rights to install to this location so \e[33mplease enter your admin password when asked\e[m.'
+echo $'\e[1mPress any key to continue installing or Ctrl-C to cancel.\e[m'
 read
 echo
 sudo -v
@@ -42,6 +42,6 @@ if [ ! $? -eq 0 ];then echo "...error! aborting." >&2; exit 10; fi
 echo "done."
 
 echo 
-echo -e "\e[32msetWeblocThumb has been successfully installed.\e[m"
+echo $'\e[32msetWeblocThumb has been successfully installed.\e[m'
 echo
 
