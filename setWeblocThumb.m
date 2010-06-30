@@ -25,7 +25,7 @@ under the License.
 
 #include <libgen.h>
 #import <Cocoa/Cocoa.h>
-#import <Webkit/Webkit.h>
+#import <WebKit/WebKit.h>
 #import "MBBase64.h"
 #import "imgBase64.m"
 #import "HGCLIUtils.h"
