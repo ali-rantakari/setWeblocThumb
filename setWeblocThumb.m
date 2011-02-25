@@ -200,6 +200,7 @@ void VerbosePrintf(NSString *aStr, ...)
 		[[[self.webView mainFrame] frameView] setAllowsScrolling:NO];
 		[self.webView setDrawsBackground:YES];
 		[self.webView setFrameLoadDelegate:self];
+		[self.webView setResourceLoadDelegate:self];
 		[self.webView setPreferences:webViewPrefs];
 	}
 	self.weblocURL = getURLOfWeblocFile(weblocFilePath);
@@ -374,6 +375,17 @@ void VerbosePrintf(NSString *aStr, ...)
 		return;
 	VerbosePrintf(@" -> got a favicon.\n");
 	self.favicon = image;
+	[self doneLoading];
+}
+
+- (void) webView:(WebView *)sender
+		 resource:(id)identifier
+		 didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+		 fromDataSource:(WebDataSource *)dataSource
+{
+	[[challenge sender] cancelAuthenticationChallenge:challenge];
+	VerbosePrintf(@" -> FAIL: Server requests authentication.\n");
+	doneIconizing = YES;
 	[self doneLoading];
 }
 
