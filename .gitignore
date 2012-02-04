@@ -4,3 +4,5 @@ usage.txt
 deploymentScpTarget
 deployment/*
 *.plist
+changelog.html
+
