@@ -16,9 +16,7 @@ GENERALCHANGELOGFILELOC="changelog.html"
 SCP_TARGET=$(shell cat ./deploymentScpTarget)
 DEPLOYMENT_INCLUDES_DIR="./deployment-files"
 
-COMPILER_GCC="gcc"
-COMPILER_CLANG="/Developer/usr/bin/clang"
-COMPILER=$(COMPILER_CLANG)
+COMPILER=clang
 
 
 SOURCE_FILES=setWeblocThumb.m MBBase64.m ANSIEscapeHelper.m HGCLIUtils.m HGCLIAutoUpdater.m HGCLIAutoUpdaterDelegate.m SetWeblocThumbAutoUpdaterDelegate.m
