@@ -453,40 +453,40 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 		Printf(@"usage: %s [options] <path>\n", myBasename);
-		Printf(@"\n");
-		Printf(@"  Sets custom icons for .webloc files that display\n");
-		Printf(@"  a thumbnail of the web page that they point to.\n");
-		Printf(@"\n");
-		Printf(@"  <path> may point to a .webloc file or a directory\n");
-		Printf(@"  that contains .webloc files.\n");
-		Printf(@"\n");
-		Printf(@"  [options:]\n");
-		Printf(@"\n");
-		Printf(@"  -u  check for updates (and optionally auto-update self)\n");
-		Printf(@"\n");
-		Printf(@"  -f  sets icons also for files that already have a\n");
-		Printf(@"      custom icon (they are ignored by default).\n");
-		Printf(@"\n");
-		Printf(@"  -ni doesn't load the site's favicon image and add it to\n");
-		Printf(@"      the generated icon.\n");
-		Printf(@"\n");
-		Printf(@"  +j  sets Java on when taking screenshots\n");
-		Printf(@"  -j  sets Java off when taking screenshots (default)\n");
-		Printf(@"\n");
-		Printf(@"  +js sets JavaScript on when taking screenshots (default)\n");
-		Printf(@"  -js sets JavaScript off when taking screenshots\n");
-		Printf(@"\n");
-		Printf(@"  +p  sets browser plugins on when taking screenshots\n");
-		Printf(@"  -p  sets browser plugins off when taking screenshots (default)\n");
-		Printf(@"\n");
-		Printf(@"  -d <sec>  waits for <sec> seconds before taking the\n");
-		Printf(@"            screenshots.\n");
-		Printf(@"\n");
-		Printf(@"  -v  makes the output verbose.\n");
-		Printf(@"\n");
-		Printf(@"Version %@\n", versionNumberStr());
-		Printf(@"Copyright (c) 2009-2010 Ali Rantakari, http://hasseg.org/setWeblocThumb\n");
-		Printf(@"\n");
+		Printf(
+		    @"\n"
+		    @"  Sets custom icons for .webloc files that display\n"
+		    @"  a thumbnail of the web page that they point to.\n"
+		    @"\n"
+		    @"  <path> may point to a .webloc file or a directory\n"
+		    @"  that contains .webloc files.\n"
+		    @"\n"
+		    @"  Stand-alone options:\n"
+		    @"\n"
+		    @"  -u  Check for updates (and optionally auto-update self)\n"
+		    @"\n"
+		    @"  Options requiring a <path>:\n"
+		    @"\n"
+		    @"  -f  Set icons also for files that already have a\n"
+		    @"      custom icon (they are ignored by default)\n"
+		    @"  -ni Do not load the site's favicon image and add it to\n"
+		    @"      the generated icon\n"
+		    @"  +j  Set Java on when taking screenshots\n"
+		    @"  -j  Set Java off when taking screenshots (default)\n"
+		    @"  +js Set JavaScript on when taking screenshots (default)\n"
+		    @"  -js Set JavaScript off when taking screenshots\n"
+		    @"  +p  Set browser plugins on when taking screenshots\n"
+		    @"  -p  Set browser plugins off when taking screenshots (default)\n"
+		    @"  -d <sec>  Wait for <sec> seconds before taking the\n"
+		    @"            screenshots\n"
+		    @"  -v  Make the output verbose.\n"
+		    @"\n"
+		    @"Version %@\n"
+		    @"Copyright (c) 2009-2010 Ali Rantakari\n"
+		    @"http://hasseg.org/setWeblocThumb\n"
+		    @"\n",
+		    versionNumberStr()
+		    );
 		exit(0);
 	}
 	
