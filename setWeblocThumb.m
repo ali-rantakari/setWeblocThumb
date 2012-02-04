@@ -448,20 +448,15 @@ int main(int argc, char *argv[])
 	char *myBasename = basename(argv[0]);
 	if (argc == 1)
 	{
-		Printf(@"usage: %s [options] <path>\n", myBasename);
 		Printf(
+		    @"%s [options] <path>\n"
 		    @"\n"
 		    @"  Sets custom icons for .webloc files that display\n"
 		    @"  a thumbnail of the web page that they point to.\n"
-		    @"\n"
 		    @"  <path> may point to a .webloc file or a directory\n"
 		    @"  that contains .webloc files.\n"
 		    @"\n"
-		    @"  Stand-alone options:\n"
-		    @"\n"
-		    @"  -u  Check for updates (and optionally auto-update self)\n"
-		    @"\n"
-		    @"  Options requiring a <path>:\n"
+		    @"  Options:\n"
 		    @"\n"
 		    @"  -f  Set icons also for files that already have a\n"
 		    @"      custom icon (they are ignored by default)\n"
@@ -476,13 +471,25 @@ int main(int argc, char *argv[])
 		    @"  -d <sec>  Wait for <sec> seconds before taking the\n"
 		    @"            screenshots\n"
 		    @"  -v  Make the output verbose.\n"
-		    @"  -a  Create a user-specific launch agent for <path> that\n"
-		    @"      runs this program each time the contents of <path> change\n"
+		    @"\n"
+		    @"%s -a <path>\n"
+		    @"\n"
+		    @"  Create a user-specific launch agent for <path> that\n"
+		    @"  runs this program each time the contents of <path> change\n"
+		    @"\n"
+		    @"%s -w\n"
+		    @"\n"
+		    @"  List paths that are being watched by user-specific launch agents\n"
+		    @"\n"
+		    @"%s -u\n"
+		    @"\n"
+		    @"  Check for updates (and optionally auto-update self)\n"
 		    @"\n"
 		    @"Version %@\n"
 		    @"Copyright (c) 2009-2012 Ali Rantakari\n"
 		    @"http://hasseg.org/setWeblocThumb\n"
 		    @"\n",
+		    myBasename, myBasename, myBasename, myBasename,
 		    versionNumberStr()
 		    );
 		exit(0);
