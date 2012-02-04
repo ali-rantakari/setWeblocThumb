@@ -57,7 +57,7 @@ setWeblocThumb: $(SOURCE_FILES) imgBase64.m
 	@echo
 	@echo ---- Compiling:
 	@echo ======================================
-	$(COMPILER) -O3 -Wall -force_cpusubtype_ALL -mmacosx-version-min=10.5 -arch i386 -arch ppc -framework Cocoa -framework WebKit -o $@ $(SOURCE_FILES)
+	$(COMPILER) -O3 -Wall -force_cpusubtype_ALL -mmacosx-version-min=10.5 -arch i386 -framework Cocoa -framework WebKit -o $@ $(SOURCE_FILES)
 
 
 
