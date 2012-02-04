@@ -19,7 +19,7 @@ DEPLOYMENT_INCLUDES_DIR="./deployment-files"
 COMPILER=clang
 
 
-SOURCE_FILES=setWeblocThumb.m MBBase64.m ANSIEscapeHelper.m HGCLIUtils.m HGCLIAutoUpdater.m HGCLIAutoUpdaterDelegate.m SetWeblocThumbAutoUpdaterDelegate.m
+SOURCE_FILES=setWeblocThumb.m launchAgentGen.m MBBase64.m ANSIEscapeHelper.m HGCLIUtils.m HGCLIAutoUpdater.m HGCLIAutoUpdaterDelegate.m SetWeblocThumbAutoUpdaterDelegate.m
 
 
 

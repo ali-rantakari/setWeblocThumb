@@ -31,6 +31,7 @@ under the License.
 #import "HGCLIUtils.h"
 #import "HGCLIAutoUpdater.h"
 #import "SetWeblocThumbAutoUpdaterDelegate.h"
+#import "launchAgentGen.h"
 
 
 #define GETURL_AS_FORMAT_STR	@"tell the application \"Finder\" to return location of (POSIX file \"%@\" as file)"
@@ -438,11 +439,6 @@ void VerbosePrintf(NSString *aStr, ...)
 
 
 
-
-
-
-
-
 int main(int argc, char *argv[])
 {
 	NSAutoreleasePool *autoReleasePool = [[NSAutoreleasePool alloc] init];
@@ -480,6 +476,8 @@ int main(int argc, char *argv[])
 		    @"  -d <sec>  Wait for <sec> seconds before taking the\n"
 		    @"            screenshots\n"
 		    @"  -v  Make the output verbose.\n"
+		    @"  -a  Create a user-specific launch agent for <path> that\n"
+		    @"      runs this program each time the contents of <path> change\n"
 		    @"\n"
 		    @"Version %@\n"
 		    @"Copyright (c) 2009-2012 Ali Rantakari\n"
@@ -496,6 +494,7 @@ int main(int argc, char *argv[])
 	BOOL arg_allowJava = NO;
 	BOOL arg_allowJavaScript = YES;
 	BOOL arg_favicon = YES;
+	BOOL arg_createLaunchAgent = NO;
 	NSMutableArray *weblocFilePaths = [NSMutableArray array];
 	
 	NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
@@ -512,6 +511,8 @@ int main(int argc, char *argv[])
 				arg_forceRun = YES;
 			else if (strcmp(argv[i], "-v") == 0)
 				arg_verbose = YES;
+			else if (strcmp(argv[i], "-a") == 0)
+				arg_createLaunchAgent = YES;
 			else if (strcmp(argv[i], "-ni") == 0)
 				arg_favicon = NO;
 			else if (strcmp(argv[i], "-js") == 0)
@@ -545,6 +546,12 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	
+	
+	if (arg_createLaunchAgent)
+    {
+        BOOL success = generateLaunchAgent(providedPath);
+        return success ? 0 : 1;
+    }
 	
 	BOOL isDir = NO;
 	if (![[NSFileManager defaultManager] fileExistsAtPath:providedPath isDirectory:&isDir])
