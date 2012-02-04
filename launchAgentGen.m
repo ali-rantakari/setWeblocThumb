@@ -60,7 +60,9 @@ static NSString *launchAgentXMLFormat =
     @"</dict>\n"
     @"</plist>";
 
-static NSString *launchctlPath = @"/bin/launchctl";
+#define LAUNCHCTL_PATH @"/bin/launchctl"
+#define USER_LAUNCH_AGENTS_PATH [@"~/Library/LaunchAgents" stringByStandardizingPath]
+#define LAUNCH_AGENT_LABEL_PREFIX @"org.hasseg.setWeblocThumb."
 
 NSString *getExecutablePath()
 {
@@ -97,7 +99,7 @@ BOOL generateLaunchAgent(NSString *targetPath)
     [labelSuffix replaceOccurrencesOfString:@"/"  withString:@"." options:NSLiteralSearch range:NSMakeRange(0, [labelSuffix length])];
     [labelSuffix replaceOccurrencesOfString:@"\"" withString:@"-" options:NSLiteralSearch range:NSMakeRange(0, [labelSuffix length])];
     [labelSuffix replaceOccurrencesOfString:@"'"  withString:@"-" options:NSLiteralSearch range:NSMakeRange(0, [labelSuffix length])];
-    NSString *label = [@"org.hasseg.setWeblocThumb." stringByAppendingString:labelSuffix];
+    NSString *label = [LAUNCH_AGENT_LABEL_PREFIX stringByAppendingString:labelSuffix];
     
     // Get absolute path to self (the setWeblocThumb executable)
     NSString *pathToExec = getExecutablePath();
@@ -110,7 +112,7 @@ BOOL generateLaunchAgent(NSString *targetPath)
         encodeForXML(absTargetPath)];
     
     // Determine target path for saving the .plist file into
-    NSString *savePath = [[@"~/Library/LaunchAgents" stringByStandardizingPath]
+    NSString *savePath = [USER_LAUNCH_AGENTS_PATH
                           stringByAppendingPathComponent:[label stringByAppendingString:@".plist"]];
     
     // Write property list XML into file
@@ -133,7 +135,7 @@ BOOL generateLaunchAgent(NSString *targetPath)
     
     // Load the launch agent via launchctl
     NSTask *launchctlLoadTask = [NSTask
-        launchedTaskWithLaunchPath:launchctlPath
+        launchedTaskWithLaunchPath:LAUNCHCTL_PATH
         arguments:[NSArray arrayWithObjects:@"load", savePath, nil]
         ];
     [launchctlLoadTask waitUntilExit];
@@ -149,5 +151,47 @@ BOOL generateLaunchAgent(NSString *targetPath)
     return YES;
 }
 
+
+#define FM [NSFileManager defaultManager]
+
+void iterateOurLaunchAgents(void(^workerBlock)(NSDictionary *agentPlist))
+{
+    NSError *dirEnumErr = nil;
+    NSArray *launchAgentDirContents = [FM contentsOfDirectoryAtPath:USER_LAUNCH_AGENTS_PATH error:&dirEnumErr];
+    if (dirEnumErr != nil)
+    {
+        PrintfErr(@"Error reading user launch agent directory contents:\n  %@\n", USER_LAUNCH_AGENTS_PATH);
+        return;
+    }
+    
+    for (NSString *filename in launchAgentDirContents)
+    {
+        NSString *path = [USER_LAUNCH_AGENTS_PATH stringByAppendingPathComponent:filename];
+        
+        BOOL isDir;
+        if (![FM fileExistsAtPath:path isDirectory:&isDir] || isDir)
+            continue;
+        NSDictionary *agentDict = [NSDictionary dictionaryWithContentsOfFile:path];
+        if (agentDict == nil)
+            continue;
+        if (![[agentDict objectForKey:@"Label"] hasPrefix:LAUNCH_AGENT_LABEL_PREFIX])
+            continue;
+        workerBlock(agentDict);
+    }
+}
+
+void printLaunchAgentWatchPaths()
+{
+    iterateOurLaunchAgents(^(NSDictionary *agentPlist)
+    {
+        NSArray *watchPaths = [agentPlist objectForKey:@"WatchPaths"];
+        if (watchPaths == nil || watchPaths.count == 0)
+            return;
+        for (NSString *watchPath in watchPaths)
+        {
+            Printf(@"%@\n", watchPath);
+        }
+    });
+}
 
 

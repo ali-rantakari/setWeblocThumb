@@ -24,4 +24,5 @@ under the License.
 #import <Cocoa/Cocoa.h>
 
 BOOL generateLaunchAgent(NSString *targetPath);
+void printLaunchAgentWatchPaths();
 

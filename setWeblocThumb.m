@@ -495,6 +495,7 @@ int main(int argc, char *argv[])
 	BOOL arg_allowJavaScript = YES;
 	BOOL arg_favicon = YES;
 	BOOL arg_createLaunchAgent = NO;
+	BOOL arg_printLaunchAgentWatchPaths = NO;
 	NSMutableArray *weblocFilePaths = [NSMutableArray array];
 	
 	NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
@@ -502,7 +503,7 @@ int main(int argc, char *argv[])
 	if (strcmp(argv[1], "-u") == 0)
 		arg_autoUpdate = YES;
 	
-	if (argc > 2)
+	if (1 < argc)
 	{
 		int i;
 		for (i = 1; i < argc; i++)
@@ -511,6 +512,8 @@ int main(int argc, char *argv[])
 				arg_forceRun = YES;
 			else if (strcmp(argv[i], "-v") == 0)
 				arg_verbose = YES;
+			else if (strcmp(argv[i], "-w") == 0)
+				arg_printLaunchAgentWatchPaths = YES;
 			else if (strcmp(argv[i], "-a") == 0)
 				arg_createLaunchAgent = YES;
 			else if (strcmp(argv[i], "-ni") == 0)
@@ -546,7 +549,11 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	
-	
+	if (arg_printLaunchAgentWatchPaths)
+    {
+        printLaunchAgentWatchPaths();
+        return 0;
+    }
 	if (arg_createLaunchAgent)
     {
         BOOL success = generateLaunchAgent(providedPath);
