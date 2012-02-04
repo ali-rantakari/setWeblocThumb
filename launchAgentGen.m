@@ -167,15 +167,21 @@ void iterateOurLaunchAgents(void(^workerBlock)(NSDictionary *agentPlist))
     for (NSString *filename in launchAgentDirContents)
     {
         NSString *path = [USER_LAUNCH_AGENTS_PATH stringByAppendingPathComponent:filename];
-        
+        // Ignore folders:
         BOOL isDir;
         if (![FM fileExistsAtPath:path isDirectory:&isDir] || isDir)
             continue;
+        // Read plist into dictionary:
         NSDictionary *agentDict = [NSDictionary dictionaryWithContentsOfFile:path];
         if (agentDict == nil)
             continue;
-        if (![[agentDict objectForKey:@"Label"] hasPrefix:LAUNCH_AGENT_LABEL_PREFIX])
+        // Ignore if it does not seem to be executing this program:
+        NSArray *programArgs = [agentDict objectForKey:@"ProgramArguments"];
+        if (programArgs == nil || programArgs.count == 0)
             continue;
+        if (![[programArgs objectAtIndex:0] hasSuffix:@"setWeblocThumb"])
+            continue;
+        // At this point we know this agent runs this program:
         workerBlock(agentDict);
     }
 }
