@@ -11,7 +11,7 @@ If you'd like to have this program run automatically whenever you add .webloc fi
 
 A launch agent is a configuration that tells the launchd system to do something (e.g. run `setWeblocThumb`) when something happens (e.g. a file is added to a specific folder).
 
-You can use `setWeblocThumb`'s -a argument to generate launch agents that watch certain paths in your filesystem. For example, run the following command to have it run every time you add files onto your desktop:
+You can use `setWeblocThumb`'s `-a` argument to generate launch agents that watch certain paths in your filesystem. For example, run the following command to have it run every time you add files onto your desktop:
 
     setWeblocThumb -a ~/Desktop
 
