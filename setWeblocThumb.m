@@ -29,8 +29,6 @@ under the License.
 #import "MBBase64.h"
 #import "imgBase64.m"
 #import "HGCLIUtils.h"
-#import "HGCLIAutoUpdater.h"
-#import "SetWeblocThumbAutoUpdaterDelegate.h"
 #import "launchAgentGen.h"
 
 
@@ -481,21 +479,16 @@ int main(int argc, char *argv[])
             @"\n"
             @"  List paths that are being watched by user-specific launch agents\n"
             @"\n"
-            @"%s -u\n"
-            @"\n"
-            @"  Check for updates (and optionally auto-update self)\n"
-            @"\n"
             @"Version %@\n"
             @"Copyright (c) 2009-2012 Ali Rantakari\n"
             @"http://hasseg.org/setWeblocThumb\n"
             @"\n",
-            myBasename, myBasename, myBasename, myBasename,
+            myBasename, myBasename, myBasename,
             versionNumberStr()
             );
         exit(0);
     }
     
-    BOOL arg_autoUpdate = NO;
     BOOL arg_forceRun = NO;
     BOOL arg_allowPlugins = NO;
     BOOL arg_allowJava = NO;
@@ -506,9 +499,6 @@ int main(int argc, char *argv[])
     NSMutableArray *weblocFilePaths = [NSMutableArray array];
     
     NSString *providedPath = [[NSString stringWithUTF8String:argv[argc-1]] stringByStandardizingPath];
-    
-    if (strcmp(argv[1], "-u") == 0)
-        arg_autoUpdate = YES;
     
     if (1 < argc)
     {
@@ -540,20 +530,6 @@ int main(int argc, char *argv[])
             else if ((strcmp(argv[i], "-d") == 0) && (i+1 < argc))
                 screenshotDelaySec = abs([[NSString stringWithCString:argv[i+1] encoding:NSUTF8StringEncoding] doubleValue]);
         }
-    }
-    
-    
-    if (arg_autoUpdate)
-    {
-        HGCLIAutoUpdater *autoUpdater = [[[HGCLIAutoUpdater alloc]
-            initWithAppName:@"setWeblocThumb"
-            currentVersionStr:versionNumberStr()
-            ] autorelease];
-        SetWeblocThumbAutoUpdaterDelegate *autoUpdaterDelegate = [[[SetWeblocThumbAutoUpdaterDelegate alloc] init] autorelease];
-        autoUpdater.delegate = autoUpdaterDelegate;
-        
-        [autoUpdater checkForUpdatesWithUI];
-        return 0;
     }
     
     if (arg_printLaunchAgentWatchPaths)
