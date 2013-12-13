@@ -234,7 +234,7 @@ void VerbosePrintf(NSString *aStr, ...)
 }
 
 
-- (void) drawAndSetIcon
+- (NSImage *) generatedIconImage
 {
     // get screenshot from webView
     NSBitmapImageRep *webViewImageRep = [webView bitmapImageRepForCachingDisplayInRect:[webView frame]];
@@ -267,7 +267,12 @@ void VerbosePrintf(NSString *aStr, ...)
         [newIconImage unlockFocus];
     }
     
-    
+    return newIconImage;
+}
+
+
+- (NSString *) currentWeblocFilePath
+{
     // resolve the file's alias handle (in case the
     // file has been moved within the same filesystem)
     NSString *resolvedWeblocFilePath = [self pathFromSavedAlias];
@@ -309,6 +314,15 @@ void VerbosePrintf(NSString *aStr, ...)
             }
         }
     }
+    
+    return resolvedWeblocFilePath;
+}
+
+
+- (void) drawAndSetIcon
+{
+    NSImage *newIconImage = [self generatedIconImage];
+    NSString *resolvedWeblocFilePath = [self currentWeblocFilePath];
     
     if (resolvedWeblocFilePath == nil)
     {
